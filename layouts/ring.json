@@ -1,0 +1,44 @@
+{
+  "name": "حلقي",
+  "elements": [
+    { "type": "pad", "anchor": "tl", "x": -33, "y": -33, "size": 72, "spread": 50,
+      "parts": [
+        { "type": "button",  "key": "LB", "label": "LB", "angle": 135, "arc": [14, 28, 90, 180], "latch": 500 },
+        { "type": "trigger", "key": "LT", "label": "LT", "angle": 135, "arc": [31, 46, 90, 180] }
+      ] },
+    { "type": "pad", "anchor": "tr", "x": -33, "y": -33, "size": 72, "spread": 50,
+      "parts": [
+        { "type": "button",  "key": "RB", "label": "RB", "angle": 225, "arc": [14, 28, 180, 270], "latch": 500 },
+        { "type": "trigger", "key": "RT", "label": "RT", "angle": 225, "arc": [31, 46, 180, 270], "dir": "ccw" }
+      ] },
+
+    { "type": "button", "key": "HOME",  "icon": "home", "shape": "round", "w": 12, "anchor": "tc", "x": 0, "y": 2 },
+    { "type": "pad", "anchor": "tc", "x": 0, "y": -16, "size": 48, "spread": 60,
+      "parts": [
+        { "type": "button", "key": "BACK",  "icon": "view", "angle": 270, "arc": [18, 36, 235, 300] },
+        { "type": "button", "key": "START", "icon": "menu", "angle": 90, "arc": [18, 36, 60, 125] }
+      ] },
+
+    { "type": "pad", "anchor": "bl", "x": 7, "y": 9, "size": 58, "spread": 60, "inner": 0.45, "reach": 1.21,
+      "parts": [
+        { "key": "UP",    "angle": 0,   "arc": [28, 50, -40, 40],  "arrow": true },
+        { "key": "RIGHT", "angle": 90,  "arc": [28, 50, 50, 130],  "arrow": true },
+        { "key": "DOWN",  "angle": 180, "arc": [28, 50, 140, 220], "arrow": true },
+        { "key": "LEFT",  "angle": 270, "arc": [28, 50, 230, 310], "arrow": true },
+        { "key": "LS",    "angle": 135,  "arc": [51, 68, 110, 160],  "label": "LS", "latch": 500 }
+      ] },
+    { "type": "stick", "side": "left", "anchor": "bl", "x": 7, "y": 9, "size": 58, "reach": 0.5, "ring": 23.2, "knob": 9.9 },
+
+    { "type": "pad", "anchor": "br", "x": 7, "y": 9, "size": 58, "spread": 60, "inner": 0.45, "reach": 1.21,
+      "parts": [
+        { "key": "Y", "angle": 0,   "arc": [28, 50, -40, 40],  "color": "y", "label": "Y", "at": [50, 15] },
+        { "key": "B", "angle": 90,  "arc": [28, 50, 50, 130],  "color": "b", "label": "B", "at": [85, 50] },
+        { "key": "A", "angle": 180, "arc": [28, 50, 140, 220], "color": "a", "label": "A", "at": [50, 85] },
+        { "key": "X", "angle": 270, "arc": [28, 50, 230, 310], "color": "x", "label": "X", "at": [15, 50] },
+        { "key": "RS","angle": 225, "arc": [51, 68, 200, 250], "label": "RS", "latch": 500 }
+      ] },
+    { "type": "stick", "side": "right", "anchor": "br", "x": 7, "y": 9, "size": 58, "reach": 0.5, "ring": 23.2, "knob": 9.9 },
+
+    { "type": "button", "action": "menu", "icon": "gear", "shape": "round", "w": 10, "anchor": "bc", "x": 0, "y": 3 }
+  ]
+}

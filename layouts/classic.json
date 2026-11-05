@@ -1,0 +1,36 @@
+{
+  "name": "كلاسيكي",
+  "elements": [
+    { "type": "panel", "anchor": "tl", "w": "50%", "h": "100%", "fill": true, "edge": "right", "label": "العصا اليسرى" },
+    { "type": "panel", "anchor": "tr", "w": "50%", "h": "100%", "fill": true, "label": "العصا اليمنى" },
+    { "type": "stick", "side": "left",  "area": "left",  "ring": 36, "knob": 15.5 },
+    { "type": "stick", "side": "right", "area": "right", "ring": 36, "knob": 15.5 },
+
+    { "type": "button",  "key": "LB", "label": "LB", "anchor": "tl", "x": 3, "y": 2 },
+    { "type": "button",  "key": "RB", "label": "RB", "anchor": "tr", "x": 3, "y": 2 },
+    { "type": "trigger", "key": "LT", "anchor": "tl", "x": 3, "y": 14, "w": 18, "h": 34 },
+    { "type": "trigger", "key": "RT", "anchor": "tr", "x": 3, "y": 14, "w": 18, "h": 34 },
+
+    { "type": "button", "key": "BACK",  "label": "Back",  "anchor": "tc", "x": -17, "y": 2 },
+    { "type": "button", "key": "HOME",  "icon": "home", "shape": "round", "w": 12, "anchor": "tc", "x": 0, "y": 1 },
+    { "type": "button", "key": "START", "label": "Start", "anchor": "tc", "x": 17, "y": 2 },
+
+    { "type": "pad", "anchor": "bl", "x": 5, "y": 4, "size": 38, "spread": 60, "inner": 0.24, "reach": 1.08,
+      "parts": [
+        { "key": "UP",    "angle": 0,   "arc": [24, 48, -40, 40],  "arrow": true },
+        { "key": "RIGHT", "angle": 90,  "arc": [24, 48, 50, 130],  "arrow": true },
+        { "key": "DOWN",  "angle": 180, "arc": [24, 48, 140, 220], "arrow": true },
+        { "key": "LEFT",  "angle": 270, "arc": [24, 48, 230, 310], "arrow": true }
+      ] },
+
+    { "type": "button", "key": "Y", "label": "Y", "shape": "round", "color": "y", "w": 13, "anchor": "br", "x": 18.5, "y": 31 },
+    { "type": "button", "key": "X", "label": "X", "shape": "round", "color": "x", "w": 13, "anchor": "br", "x": 32,   "y": 17.5 },
+    { "type": "button", "key": "B", "label": "B", "shape": "round", "color": "b", "w": 13, "anchor": "br", "x": 5,    "y": 17.5 },
+    { "type": "button", "key": "A", "label": "A", "shape": "round", "color": "a", "w": 13, "anchor": "br", "x": 18.5, "y": 4 },
+
+    { "type": "button", "key": "LS", "label": "LS", "shape": "round", "w": 10, "anchor": "bl", "x": 47, "y": 18, "latch": 500 },
+    { "type": "button", "key": "RS", "label": "RS", "shape": "round", "w": 10, "anchor": "br", "x": 48, "y": 18, "latch": 500 },
+
+    { "type": "button", "action": "menu", "icon": "gear", "shape": "round", "w": 10, "anchor": "bc", "x": 0, "y": 4 }
+  ]
+}

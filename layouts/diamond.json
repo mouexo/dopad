@@ -1,0 +1,41 @@
+{
+  "name": "ماسي",
+  "elements": [
+    { "type": "pad", "anchor": "tl", "x": -33, "y": -33, "size": 72, "spread": 50, "metric": "diamond",
+      "parts": [
+        { "type": "button",  "key": "LB", "label": "LB", "angle": 135, "poly": "64,50 78,50 50,78 50,64", "latch": 500 },
+        { "type": "trigger", "key": "LT", "label": "LT", "angle": 135, "poly": "81,50 96,50 50,96 50,81", "sweep": [90, 180] }
+      ] },
+    { "type": "pad", "anchor": "tr", "x": -33, "y": -33, "size": 72, "spread": 50, "metric": "diamond",
+      "parts": [
+        { "type": "button",  "key": "RB", "label": "RB", "angle": 225, "poly": "36,50 22,50 50,78 50,64", "latch": 500 },
+        { "type": "trigger", "key": "RT", "label": "RT", "angle": 225, "poly": "19,50 4,50 50,96 50,81", "sweep": [180, 270], "dir": "ccw" }
+      ] },
+
+    { "type": "button", "key": "BACK",  "icon": "view", "anchor": "tc", "x": -16, "y": 3, "w": 16 },
+    { "type": "button", "key": "HOME",  "icon": "home", "shape": "round", "w": 12, "anchor": "tc", "x": 0, "y": 2 },
+    { "type": "button", "key": "START", "icon": "menu", "anchor": "tc", "x": 16, "y": 3, "w": 16 },
+
+    { "type": "pad", "anchor": "bl", "x": 7, "y": 0, "size": 67, "metric": "diamond", "spread": 60, "inner": 0.45, "reach": 1.08,
+      "parts": [
+        { "key": "UP",    "angle": 0,   "poly": "50,2 74,26 50,50 26,26",  "arrow": true },
+        { "key": "RIGHT", "angle": 90,  "poly": "98,50 74,74 50,50 74,26",  "arrow": true },
+        { "key": "DOWN",  "angle": 180, "poly": "50,98 26,74 50,50 74,74", "arrow": true },
+        { "key": "LEFT",  "angle": 270, "poly": "2,50 26,26 50,50 26,74", "arrow": true }
+      ] },
+    { "type": "stick", "side": "left", "anchor": "bl", "x": 7, "y": 0, "size": 67, "reach": 0.4, "ring": 24, "knob": 9 },
+
+    { "type": "pad", "anchor": "br", "x": 7, "y": 0, "size": 67, "metric": "diamond", "spread": 60, "inner": 0.45, "reach": 1.08,
+      "parts": [
+        { "key": "Y", "angle": 0,   "color": "y", "poly": "50,2 74,26 50,50 26,26",  "label": "Y", "at": [50, 15] },
+        { "key": "B", "angle": 90,  "color": "b", "poly": "98,50 74,74 50,50 74,26", "label": "B", "at": [85, 50] },
+        { "key": "A", "angle": 180, "color": "a", "poly": "50,98 26,74 50,50 74,74", "label": "A", "at": [50, 85] },
+        { "key": "X", "angle": 270, "color": "x", "poly": "2,50 26,26 50,50 26,74",  "label": "X", "at": [15, 50] }
+      ] },
+    { "type": "stick", "side": "right", "anchor": "br", "x": 7, "y": 0, "size": 67, "reach": 0.4, "ring": 24, "knob": 9 },
+
+    { "type": "button", "key": "LS", "label": "LS", "shape": "round", "w": 10, "anchor": "bc", "x": -14, "y": 3, "latch": 500 },
+    { "type": "button", "action": "menu", "icon": "gear", "shape": "round", "w": 10, "anchor": "bc", "x": 0, "y": 3 },
+    { "type": "button", "key": "RS", "label": "RS", "shape": "round", "w": 10, "anchor": "bc", "x": 14, "y": 3, "latch": 500 }
+  ]
+}

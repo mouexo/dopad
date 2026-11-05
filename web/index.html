@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ذراع التحكم</title>
+<!-- تثبيت كتطبيق ويب على الشاشة الرئيسية: على iPhone هذا هو السبيل الوحيد
+     لفتح اللعبة بلا شريط عنوان أو أدوات Safari (واجهة Fullscreen API
+     غير مدعومة على iPhone، بخلاف iPad والأندرويد). -->
+<meta name="theme-color" content="#1c2333">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DOpad">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="stylesheet" href="controls.css">
+</head>
+<body>
+
+<div id="menu">
+  <h1>ذراع التحكم</h1>
+  <p>اللاعب</p>
+  <div id="players" class="chips"></div>
+  <p>التخطيط</p>
+  <div id="layouts" class="chips"></div>
+  <small>النقطة الخضراء = الخانة مشغولة. اختيار خانة مشغولة ينقلها إلى هذا الجهاز.</small>
+  <button type="button" id="fsHint" hidden></button>
+  <div id="err"></div>
+  <button class="big" id="go">ابدأ</button>
+</div>
+
+<div id="probe"></div>
+<div id="stage" hidden></div>
+<div id="status" hidden></div>
+<div id="ui" hidden></div>
+
+<script>
+/* ---------- إبقاء الشاشة مضاءة ----------
+   أثناء اللعب نحاول Screen Wake Lock (يتطلب HTTPS أو localhost)، وإن لم
+   يتوفر نستخدم فيديو صامتًا قصيرًا يعيد المتصفح تشغيله باستمرار: هذه هي
+   الطريقة المعروفة لمنع القفل على HTTP. كلاهما يُحرَّر عند العودة للقائمة. */
+(() => {
+  const menu = document.getElementById("menu");
+  const go = document.getElementById("go");
+  let wake = null, video = null, wanted = false, stopTimer = 0;
+
+  const makeVideo = () => {
+    if (video) return video;
+    video = document.createElement("video");
+    /* أسلوب NoSleep: فيديو قصير بمسار صوت صامت، بلا muted. المسار الصامت هو
+       ما يجعل المتصفح يعتبره وسائط تُشغَّل فعلًا فيُبقي الشاشة مضاءة؛ الفيديو
+       المكتوم أو بلا مسار صوتي كثيرًا ما يُستثنى من ذلك. لا صوت مسموع إطلاقًا. */
+    video.playsInline = true;
+    video.loop = true;
+    video.preload = "auto";
+    video.disablePictureInPicture = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.setAttribute("aria-hidden", "true");
+    video.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1";
+    // نقدّم المصدرين ونترك المتصفح يختار، كما في NoSleep: بعض إصدارات
+    // سفاري تخطئ في canPlayType لكنها تختار mp4 من <source> بنجاح.
+    for (const [type, src] of [["video/webm", "/wake.webm"], ["video/mp4", "/wake.mp4"]]) {
+      const s = document.createElement("source");
+      s.type = type; s.src = src;
+      video.appendChild(s);
+    }
+    // احتياط إضافي ضد تقطع الحلقة في سفاري: أعد التقديم عند النهاية وعند
+    // تجاوز آخر جزء من الثانية.
+    video.addEventListener("ended", () => { video.currentTime = 0; video.play().catch(() => {}); });
+    video.addEventListener("timeupdate", () => {
+      if (video.duration && video.currentTime > video.duration - 0.15) video.currentTime = 0;
+    });
+    document.body.appendChild(video);
+    return video;
+  };
+
+  const playVideo = () => {
+    if (!wanted || document.hidden) return;
+    const v = makeVideo();
+    v.muted = false;
+    v.play().catch(() => {
+      // بلا إيماءة مستخدم يرفض المتصفح الوسائط غير المكتومة؛ نكتُمها كحل
+      // أخير بدل ترك الشاشة بلا أي محاولة.
+      v.muted = true;
+      v.play().catch(() => {});
+    });
+  };
+
+  async function requestWake() {
+    if (!wanted || document.hidden) return false;
+    if (!navigator.wakeLock) return false;
+    if (wake) return true;
+    try {
+      const l = await navigator.wakeLock.request("screen");
+      wake = l;
+      l.addEventListener("release", () => {
+        if (wake !== l) return;
+        wake = null;
+        if (wanted && !document.hidden) playVideo(); // تراجع تلقائي (طاقة منخفضة…)
+      });
+      return true;
+    } catch (_) { wake = null; return false; }
+  }
+
+  function releaseWake() {
+    const l = wake; wake = null;
+    if (l) l.release().catch(() => {});
+  }
+
+  async function start() {
+    wanted = true;
+    clearTimeout(stopTimer); stopTimer = 0;
+    if (!(await requestWake())) playVideo();
+  }
+
+  function stop() {
+    wanted = false;
+    clearTimeout(stopTimer); stopTimer = 0;
+    releaseWake();
+    if (video) video.pause();
+  }
+
+  // التشغيل داخل إيماءة الضغط نفسها: بعض المتصفحات (خصوصًا iOS) ترفض
+  // تشغيل الفيديو لاحقًا خارج الإيماءة، وهذا هو السبب الشائع لفشل الحيلة.
+  const arm = () => {
+    wanted = true;
+    clearTimeout(stopTimer);
+    if (!window.isSecureContext || !navigator.wakeLock) playVideo();
+    else requestWake().then((ok) => { if (!ok) playVideo(); });
+    // لو فشل فتح التخطيط وبقيت القائمة ظاهرة، لا نُبقي الفيديو يعمل عبثًا.
+    stopTimer = setTimeout(() => { if (!menu.hidden) stop(); }, 15000);
+  };
+  go.addEventListener("pointerdown", arm, { passive: true });
+  go.addEventListener("click", arm, { passive: true });
+
+  // يبدأ عند إخفاء القائمة (بعد نجاح فتح التخطيط) ويتوقف عند ظهورها.
+  new MutationObserver(() => { menu.hidden ? start() : stop(); })
+    .observe(menu, { attributes: true, attributeFilter: ["hidden"] });
+
+  // أي لمسة لاحقة فرصة أخرى لتشغيل الفيديو إن أوقفه المتصفح.
+  document.addEventListener("pointerdown", () => { if (wanted && !wake) playVideo(); }, { passive: true });
+
+  // المتصفح يوقف الفيديو ويحرّر القفل عند تبديل التطبيق؛ نعيدهما عند العودة.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { releaseWake(); if (video) video.pause(); }
+    else if (wanted) start();
+  });
+  addEventListener("pageshow", () => { if (wanted) start(); });
+})();
+</script>
+<script src="controls.js"></script>
+</body>
+</html>

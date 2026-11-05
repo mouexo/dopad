@@ -1,0 +1,21 @@
+# Build artifacts (use GitHub Releases for prebuilt binaries)
+/DOpad
+/DOpad.exe
+/*.exe
+/*.dll
+/packed
+
+# Required for Windows builds (ViGEmClient, MIT — see docs/THIRD_PARTY_NOTICES.md)
+!server/ViGEmClient.dll
+
+# Generated/local runtime files
+dopad.crt
+dopad.key
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*~
+*.swp
+.idea/
+.vscode/

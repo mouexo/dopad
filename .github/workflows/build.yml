@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - name: Build (Linux amd64)
+        run: |
+          cd server
+          go build -ldflags="-s -w" -o ../DOpad-linux-amd64 .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DOpad-linux-amd64
+          path: DOpad-linux-amd64
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - name: Build (Windows amd64)
+        shell: bash
+        run: |
+          cd server
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ../DOpad-windows-amd64.exe .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DOpad-windows-amd64
+          path: DOpad-windows-amd64.exe
