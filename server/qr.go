@@ -648,7 +648,9 @@ type QRCode struct {
 
 // GenerateQR يُنشئ رمز QR للبيانات المعطاة.
 func GenerateQR(data string) *QRCode {
-	ecLevel := ecLevelL
+	// مستوى M (15% استعادة) بدل L (7%): الرابط المحلي قصير، فيبقى الرمز
+	// بنفس الحجم تقريباً لكنه يُقرأ من شاشة أو ورق بثبات أكبر.
+	ecLevel := ecLevelM
 	v := pickVersion(len(data), ecLevel)
 
 	// ترميز البيانات والـ EC
@@ -690,12 +692,26 @@ func GenerateQR(data string) *QRCode {
 // ---------------------------------------------------------------------------
 
 // ToASCII يُعيد الرمز كنص باستخدام شخصيات نصف المربع.
-// يطبع صفين في سطر واحد لتوفير المساحة على الطرفية.
+// يطبع صفين في سطر واحد لتوفير المساحة على الطرفية، مع هامش فاتح
+// (quiet zone) بعرض 4 وحدات — بدونه تفشل بعض الماسحات في التعرف.
 func (q *QRCode) ToASCII() string {
 	m := q.matrix
+	const border = 4 // وحدات QR قياسية حول الرمز
 	var buf bytes.Buffer
-	// حافة فاتحة
+	blank := make([]byte, 0, border+m.size+border+1)
+	for i := 0; i < border+m.size+border; i++ {
+		blank = append(blank, ' ')
+	}
+	blank = append(blank, '\n')
+
+	// الهامش العلوي: 4 وحدات = سطران (كل سطر يرسم وحدتين رأسياً).
+	for i := 0; i < border/2; i++ {
+		buf.Write(blank)
+	}
 	for r := 0; r < m.size; r += 2 {
+		for i := 0; i < border; i++ {
+			buf.WriteByte(' ')
+		}
 		for c := 0; c < m.size; c++ {
 			top := r < m.size && m.dark[r][c]
 			bottom := r+1 < m.size && m.dark[r+1][c]
@@ -710,7 +726,13 @@ func (q *QRCode) ToASCII() string {
 				buf.WriteByte(' ')
 			}
 		}
+		for i := 0; i < border; i++ {
+			buf.WriteByte(' ')
+		}
 		buf.WriteByte('\n')
+	}
+	for i := 0; i < border/2; i++ {
+		buf.Write(blank)
 	}
 	return buf.String()
 }

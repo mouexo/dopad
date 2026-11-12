@@ -7,7 +7,7 @@
 //
 // لماذا WebSocket وليس WebRTC؟  لأن Safari/Brave على iOS تتطلّبان
 // سياق HTTPS لتفعيل RTCPeerConnection، وهو غير عملي للاستخدام المحلي
-// دون تثقيق شهادة. WebSocket يعمل على HTTP على كل المتصفحات.
+// دون تثبيت شهادة. WebSocket يعمل على HTTP على كل المتصفحات.
 package main
 
 import (
@@ -470,9 +470,15 @@ func localIP() string {
 func main() {
 	var self bool
 	flag.BoolVar(&self, "s", false, "self: use this computer itself as the WiFi hotspot (requires root)")
+	var bt bool
+	flag.BoolVar(&bt, "b", false, "bluetooth: اتصل بهاتف مقترن عبر البلوتوث بدل الواي فاي (PAN)")
 	var fixFW bool
 	flag.BoolVar(&fixFW, "fix-firewall", false, "(داخلي) ويندوز: أضف قاعدة سماح في جدار الحماية ثم اخرج")
 	flag.Parse()
+	if self && bt {
+		fmt.Fprintln(os.Stderr, "لا يمكن الجمع بين -s (نقطة وصل واي فاي) و-b (بلوتوث): اختر واحداً.")
+		os.Exit(2)
+	}
 	if fixFW { // النسخة المرفوعة المخفية التي يشغّلها ensureFirewall()
 		if err := fixFirewall(); err != nil {
 			os.Exit(1)
@@ -497,7 +503,7 @@ func main() {
 
 	addr := envOr("DOPAD_ADDR", localIP())
 
-	teardown := func() {}
+	var stops []func()
 	if self {
 		a, fn, err := startSelfMode(envOr("DOPAD_SUBNET", "192.168.50"))
 		if err != nil {
@@ -505,14 +511,12 @@ func main() {
 			os.Exit(1)
 		}
 		addr = a
-		teardown = fn
-		sig := make(chan os.Signal, 4)
-		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			<-sig
-			teardown()
-			os.Exit(0)
-		}()
+		stops = append(stops, fn)
+	}
+	teardown := func() {
+		for i := len(stops) - 1; i >= 0; i-- {
+			stops[i]()
+		}
 	}
 
 	port := envOr("DOPAD_PORT", "8080")
@@ -522,7 +526,7 @@ func main() {
 	fallback := false
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		fmt.Printf("⚠️ Port %s is not available. Trying other outlets...\n", port)
+		fmt.Printf("⚠️ Port %s is not available. Trying other ports...\n", port)
 		for p := 8081; p <= 8090; p++ {
 			ln, err = net.Listen("tcp", fmt.Sprintf(":%d", p))
 			if err == nil {
@@ -537,8 +541,12 @@ func main() {
 		}
 	}
 
-	url := fmt.Sprintf("http://%s:%s", addr, port)
-	qr := GenerateQR(url)
+	// في الوضع العادي يكون العنوان معروفاً مسبقاً؛ في وضع البلوتوث يتغيّر
+	// العنوان مع كل هاتف، فيبقى /qr يعرض أحدث رابط فقط.
+	qrNow := &qrStore{}
+	if !bt {
+		qrNow.set(GenerateQR(fmt.Sprintf("http://%s:%s", addr, port)))
+	}
 
 	layouts := findLayouts(web)
 	mux := http.NewServeMux()
@@ -548,15 +556,45 @@ func main() {
 	mux.HandleFunc("/ws", wsHandler)
 	mux.HandleFunc("/slots", slotsState)
 	mux.HandleFunc("/manifest.webmanifest", manifestHandler(web))
-	mux.HandleFunc("/qr", qrHandler(qr))
+	mux.HandleFunc("/qr", qrHandler(qrNow))
 
 	if fallback {
 		fmt.Printf("The port %s was selected automatically ✅ (the requested port is forbidden or occupied).\n", port)
 	}
 	fmt.Printf("\nInterface: %s, Players: %d\n\n", web, players)
-	fmt.Print(qr.ToASCII())
-	fmt.Println()
-	fmt.Printf("Open 🎮DOpad on browser: http://%s:%s\n", addr, port)
+	if bt {
+		fmt.Printf("🟢 الخادم يعمل الآن على المنفذ %s — لا ينتظر أي هاتف.\n", port)
+		fmt.Println("🔵 وضع البلوتوث مفعّل: سأطبع الرابط ورمز QR لحظة اتصال أول هاتف مقترن.")
+		fmt.Println("   اقترن بالهاتف وفعّل «مشاركة الاتصال بالبلوتوث»؛ لا حاجة لإعادة التشغيل.")
+	} else {
+		fmt.Print(qrNow.get().ToASCII())
+		fmt.Println()
+		fmt.Printf("Open 🎮DOpad on browser: http://%s:%s\n", addr, port)
+	}
+
+	// مدير البلوتوث يعمل في الخلفية: يعيد المحاولة بلا نهاية ويعلن كل رابط
+	// جديد. وصول صفر هاتف لا يوقف الخادم ولا يطبع أخطاء متكررة.
+	if bt {
+		stops = append(stops, startBTBackground(func(dev, ip string) {
+			u := fmt.Sprintf("http://%s:%s", ip, port)
+			q := GenerateQR(u)
+			qrNow.set(q)
+			fmt.Printf("\n✅ بلوتوث: %s — %s\n", dev, u)
+			fmt.Print(q.ToASCII())
+			fmt.Println()
+		}))
+	}
+
+	// إعادة الوضع الأصلي عند Ctrl+C أو SIGTERM (نقطة الوصل/البلوتوث معاً).
+	if len(stops) > 0 {
+		sig := make(chan os.Signal, 4)
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			<-sig
+			teardown()
+			os.Exit(0)
+		}()
+	}
 
 	srv := &http.Server{
 		Handler:           mux,
@@ -568,11 +606,33 @@ func main() {
 	log.Fatal(err)
 }
 
-// qrHandler يخدم رمز QR بتنسيق PNG عبر مسار /qr. الصورة تُبنى مرة واحدة
-// عند التشغيل لأن العنوان والمنفذ لا يتغيران بعد ذلك.
-func qrHandler(qr *QRCode) http.HandlerFunc {
-	png := qr.ToPNG(10)
+// qrStore يحمل أحدث رمز QR. في الوضع العادي لا يتغيّر أبداً، وفي وضع
+// البلوتوث يُحدَّث عند كل هاتف يتصل كي يعرض /qr الرابط الصحيح.
+type qrStore struct {
+	mu sync.RWMutex
+	qr *QRCode
+}
+
+func (s *qrStore) set(q *QRCode) {
+	s.mu.Lock()
+	s.qr = q
+	s.mu.Unlock()
+}
+
+func (s *qrStore) get() *QRCode {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.qr
+}
+
+// qrHandler يخدم أحدث رمز QR بتنسيق PNG عبر مسار /qr.
+func qrHandler(store *qrStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		writeBody(w, "image/png", png)
+		q := store.get()
+		if q == nil {
+			http.Error(w, "لم يتصل هاتف بعد — لا يوجد رمز QR حتى الآن", http.StatusNotFound)
+			return
+		}
+		writeBody(w, "image/png", q.ToPNG(12))
 	}
 }

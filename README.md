@@ -25,18 +25,19 @@ The whole project is plain Go standard library: **no cgo and no third-party Go d
 3. [Requirements](#requirements)
 4. [Using DOpad](#using-dopad)
 5. [Hotspot mode (no router)](#hotspot-mode-no-router)
-6. [Configuration](#configuration)
-7. [Windows notes](#windows-notes)
-8. [Linux notes](#linux-notes)
-9. [Customizing layouts](#customizing-layouts)
-10. [How it works](#how-it-works)
-11. [Why WebSocket and not WebRTC](#why-websocket-and-not-webrtc)
-12. [Security notes](#security-notes)
-13. [Building from source](#building-from-source)
-14. [Project structure](#project-structure)
-15. [Troubleshooting](#troubleshooting)
-16. [Tested on](#tested-on)
-17. [Contributing and license](#contributing-and-license)
+6. [Bluetooth mode (no Wi-Fi)](#bluetooth-mode-no-wi-fi)
+7. [Configuration](#configuration)
+8. [Windows notes](#windows-notes)
+9. [Linux notes](#linux-notes)
+10. [Customizing layouts](#customizing-layouts)
+11. [How it works](#how-it-works)
+12. [Why WebSocket and not WebRTC](#why-websocket-and-not-webrtc)
+13. [Security notes](#security-notes)
+14. [Building from source](#building-from-source)
+15. [Project structure](#project-structure)
+16. [Troubleshooting](#troubleshooting)
+17. [Tested on](#tested-on)
+18. [Contributing and license](#contributing-and-license)
 
 ---
 
@@ -50,6 +51,7 @@ The whole project is plain Go standard library: **no cgo and no third-party Go d
 - **Multiple players.** Up to 16 virtual controllers (6 by default), one slot per phone.
 - **Tiny and light.** One self-contained binary, a few thousand lines of code, and 8-byte packets.
 - **Built-in hotspot mode (Linux)** — the computer itself becomes the Wi-Fi access point, with an embedded DHCP server. No router and no internet required.
+- **Bluetooth mode (`-b`)** — same page and same 8-byte packets over Bluetooth instead of Wi-Fi. Works with Android and iPhone, with no app on the phone, and never interferes with either device's Wi-Fi.
 - **QR code** printed in the terminal and served as PNG at `/qr`.
 - **Screen stays awake** while playing (Screen Wake Lock, with a silent-video fallback for plain HTTP).
 - **Installable as a web app** on iPhone for a true fullscreen experience.
@@ -74,11 +76,14 @@ The whole project is plain Go standard library: **no cgo and no third-party Go d
 On start, the program prints something like:
 
 ```
-Web UI: /home/user/dopad/web   Players: 6
-Open on your phone:  http://192.168.1.42:8080
+Interface: /home/user/dopad/web, Players: 6
+
+... QR code ...
+
+Open 🎮DOpad on browser: http://192.168.1.42:8080
 ```
 
-along with a QR code. Open the address on your phone (same Wi-Fi network), pick a player and a layout, and press **Start**.
+Open the address on your phone (same Wi-Fi network), pick a player and a layout, and press **Start**.
 
 > The program must stay next to its `web/` and `layouts/` folders (or point to them with `DOPAD_WEB` and `DOPAD_LAYOUTS`).
 
@@ -97,7 +102,8 @@ See [Building from source](#building-from-source).
 | Item | Details |
 |---|---|
 | Computer OS | **Linux** (uinput) **or** **Windows** (ViGEm Bus) |
-| Network | Phone and computer on the **same local network** (or use [hotspot mode](#hotspot-mode-no-router) on Linux) |
+| Network | Phone and computer on the **same local network**, or use [hotspot mode](#hotspot-mode-no-router) (Linux) or [Bluetooth mode](#bluetooth-mode-no-wi-fi) |
+| Bluetooth (optional) | `-b` mode: a paired Android/iPhone with Bluetooth tethering or Personal Hotspot. Linux also needs NetworkManager/BlueZ (or root + `bluez-tools` + a DHCP client) |
 | Port | TCP **8080** by default (tries up to 8090 if busy) |
 | Go | `go >= 1.24` — only if you build from source |
 | Linux permissions | Access to `/dev/uinput` (see [Linux notes](#linux-notes)) |
@@ -136,7 +142,8 @@ The server prints the address as an ASCII QR code in the terminal. A PNG version
 
 ```bash
 sudo ./DOpad -s
-# prints e.g.:  Direct hotspot: SSID=DOPad on wlan0 -> http://192.168.50.1:8080
+# prints the SSID/password line (in Arabic), a QR code, and the phone URL:
+# Open 🎮DOpad on browser: http://192.168.50.1:8080
 ```
 
 `-s` turns the computer **itself** into a Wi-Fi access point (with a built-in DHCP server). It is useful when there is no router or no internet. It is **Linux only**, needs **root**, and relies on **NetworkManager** (`nmcli`). Press `Ctrl+C` once: the access point stops and the original Wi-Fi connection is restored.
@@ -144,6 +151,45 @@ sudo ./DOpad -s
 > The default hotspot password is `12345678`. **Set your own** with `DOPAD_PASS` (see [Security notes](#security-notes)).
 
 On Windows, `-s` is not supported — run the server normally on your local network.
+
+---
+
+## Bluetooth mode (no Wi-Fi)
+
+```bash
+./DOpad -b
+```
+
+`-b` carries the same page and the same 8-byte packets over **Bluetooth instead of Wi-Fi**. The phone provides the network link, the computer is the client — that is the only combination that works on Linux, Windows, Android and iPhone without an app on the phone.
+
+**Pair the phone with the computer first**, then run `./DOpad -b`:
+
+- **Android:** enable **Bluetooth tethering** (Settings → Network & internet → Hotspot & tethering → Bluetooth tethering).
+- **iPhone:** turn on **Personal Hotspot → Allow Others to Join**, then pair from the computer's Bluetooth settings (Apple requires cellular data to be enabled for this feature).
+
+The server starts **immediately** and keeps running with **zero phones connected** — it never waits, never fails and never asks you to hurry. In the background it keeps trying every paired phone, and prints that phone's URL and ASCII QR code the moment a link comes up.
+
+- **Several phones:** each phone is announced separately as it connects. On Linux they can be connected at the same time (one NetworkManager profile per phone). Windows carries **one Bluetooth link at a time** and moves on to another paired phone automatically if one fails.
+- Pair a new phone, unpair one, or toggle tethering at any time: no restart needed.
+
+If two phones advertise the same Bluetooth subnet (two iPhones both use `172.20.10.0/28`), the program keeps the first and prints a clear warning instead of hiding the collision.
+
+**Your Wi-Fi is never touched.** `-b` does not bridge interfaces, does not route, and never installs a default route over Bluetooth, so the computer keeps its own Wi-Fi internet and the phone keeps its own. All four combinations behave as expected:
+
+| Computer Wi-Fi | Phone Wi-Fi | Computer internet | Phone internet | Page over Bluetooth |
+|---|---|---|---|---|
+| on | off | yes | no | works |
+| off | on | no | yes | works |
+| on | on | yes | yes | works |
+| off | off | no | no | works |
+
+Requirements and notes:
+
+- **Linux:** uses **NetworkManager** and normally needs **no root** (`ipv4.never-default=yes` guarantees no routing). If your distribution restricts NetworkManager to privileged users, add your user to the `network` group or run with `sudo`. If NetworkManager is missing (headless server), it falls back to **root mode** — `sudo ./DOpad -b` using `bluez-tools` and a DHCP client — and says so explicitly.
+- **Windows:** pairing is a normal user action; removing the Bluetooth default route needs administrator rights. Run as administrator if you want a hard guarantee that no traffic ever goes over Bluetooth.
+- **iPhone caveat:** iOS only offers Bluetooth networking through Personal Hotspot, which requires cellular data to be enabled. The "no internet at all" row is therefore impossible on iPhone — an iOS limitation, not a DOpad one.
+- `DOPAD_BT=<MAC>` selects a specific paired phone when several are paired.
+- `DOPAD_BT_IFACE=<iface>` uses an already configured interface (manual or root setups).
 
 ---
 
@@ -162,8 +208,10 @@ All settings are environment variables:
 | `DOPAD_SSID` / `DOPAD_PASS` | Hotspot name and password | `DOPad` / `12345678` |
 | `DOPAD_BAND` / `DOPAD_CHANNEL` | Hotspot band and channel (2.4 GHz is the most compatible) | `bg` / `6` |
 | `DOPAD_SUBNET` | Hotspot subnet prefix | `192.168.50` |
+| `DOPAD_BT` | Bluetooth address of the phone to use in `-b` mode | first paired phone |
+| `DOPAD_BT_IFACE` | Use an existing Bluetooth network interface (manual/root setup) | unset |
 
-Command-line flags: `-s` (hotspot mode). An internal `-fix-firewall` flag is used by the Windows firewall helper.
+Command-line flags: `-s` (hotspot mode), `-b` (Bluetooth mode). An internal `-fix-firewall` flag is used by the Windows firewall helper.
 
 If port 8080 is busy or blocked, DOpad tries the next ports up to 8090 and updates the printed link and QR code. If none works, it tells you to choose one with `DOPAD_PORT`.
 
@@ -425,7 +473,7 @@ For diagnosis open the page with `?debug=1` to see touch counts and events at th
 
 ## How it works
 
-1. The server serves the web UI from disk (`web/`) at `/`.
+1. The server serves the web UI from `web/` on disk (or from an embedded copy built with `webembed`) at `/`.
 2. On **Start**, the browser opens `ws://host:8080/ws?slot=N`.
 3. The page converts touches into a state and sends it as a **8-byte binary packet**:
 
@@ -455,6 +503,8 @@ Button bits (identical to XInput's `wButtons`):
 
 HTTP endpoints: `/` (web UI), `/ws` (WebSocket), `/api/layouts` (layout list), `/layouts/` (layout files), `/slots` (slot state), `/manifest.webmanifest`, `/qr` (QR as PNG).
 
+In Bluetooth mode (`-b`), the phone provides a Bluetooth PAN (NAP) and the computer joins as a PANU client. The same HTTP/WebSocket server listens on the PAN interface's IPv4 address; no Wi-Fi bridge and no default route are created.
+
 The WebSocket server is a hand-written, standards-based implementation (`crypto/sha1`, `encoding/binary`, `net`). Frames are limited to 64 KB, fragmented frames are not needed for 8-byte messages, and the HTTP server uses a header read timeout against Slowloris-style connections.
 
 ---
@@ -473,6 +523,7 @@ All browsers on **iOS** (Safari, Chrome, Brave — they all use WebKit) require 
 - Traffic is plain HTTP; do not use it on untrusted or public networks.
 - The default hotspot password (`12345678`) is public knowledge. **Set `DOPAD_PASS`** before using `-s` anywhere others might be nearby.
 - On Windows the firewall rule it adds is limited to the local network.
+- Bluetooth mode (`-b`) only talks to phones already paired with the computer; the phone provides the PAN link. It still has no app-level authentication, so use it only with your own devices.
 
 ---
 
@@ -483,20 +534,36 @@ make build            # Linux binary: ./DOpad
 make build-windows    # Windows binary: ./DOpad.exe (cross-compiles from Linux)
 make run              # build and run
 make run-self         # build and run in hotspot mode (sudo)
+make run-bt           # build and run in Bluetooth mode
 make setup            # Linux: udev rule + input group (once, if needed)
-make clean            # remove build outputs
+make dist             # four ready-to-run folders in dist/ (see below)
+make clean            # remove build outputs and dist/
 ```
 
-Directly on Windows:
+Directly on Windows (cmd):
 
 ```bat
 cd server
-go build -o DOpad.exe .
+set CGO_ENABLED=0
+go build -trimpath -ldflags="-s -w" -tags vigemdll -o DOpad.exe .
 ```
+
+Omit `-tags vigemdll` if you prefer to keep `ViGEmClient.dll` next to `DOpad.exe` instead of embedding it.
 
 If `server/ViGEmClient.dll` exists, `make build-windows` embeds it using the `vigemdll` build tag, producing a single-file `DOpad.exe`.
 
-**Smaller binaries.** Add `-ldflags="-s -w"` to the `go build` lines in the Makefile to strip the symbol table and debug information. It typically shrinks the binary by about 30% (for example from ~11 MB to ~7.6 MB) with no effect on performance.
+**Two variants per OS.** `make dist` produces both variants at once in four folders under `dist/` (regenerated on every run; the version comes from the latest Git tag and can be overridden with `make dist V=1.2.3`):
+
+| Folder | Web UI | Contents |
+|---|---|---|
+| `dist/DOpad-<version>-linux/` | embedded | `DOpad`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-linux+web/` | external `web/` | `DOpad`, `web/`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-windows/` | embedded | `DOpad.exe`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-windows+web/` | external `web/` | `DOpad.exe`, `web/`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
+
+The binary keeps the same name inside each folder. The embedded variants do **not** include `web/`, because an external `web/` folder always takes priority at runtime. `layouts/` stays external in every variant so you can edit it. On Windows, `ViGEmClient.dll` is embedded when `server/ViGEmClient.dll` exists.
+
+**Smaller, reproducible binaries.** The Makefile already builds with `-ldflags="-s -w"` (strips the symbol table and debug information) and `-trimpath` (removes local filesystem paths from the binary). If you build manually, add the same flags. `-ldflags="-s -w"` typically shrinks the binary by about 30% (for example from ~11 MB to ~7.6 MB) with no effect on performance. The Makefile also sets `CGO_ENABLED=0`, so the Linux binary is statically linked and does not depend on the host's libc.
 
 ---
 
@@ -512,14 +579,19 @@ dopad/
 │   └── THIRD_PARTY_NOTICES.md
 ├── server/                    # Go module
 │   ├── go.mod
-│   ├── main.go                # HTTP + WebSocket + slots + -s mode (platform independent)
+│   ├── main.go                # HTTP + WebSocket + slots + -s / -b mode (platform independent)
 │   ├── pad_linux.go           # virtual gamepad via uinput + ioctl
 │   ├── pad_windows.go         # virtual gamepad via ViGEm Bus (syscall, no cgo)
 │   ├── ap.go                  # hotspot + embedded DHCP server (Linux only)
 │   ├── selfmode_linux.go      # start/stop of -s mode on Linux
 │   ├── selfmode_windows.go    # rejects -s on Windows
+│   ├── btmode_common.go       # Bluetooth mode: shared helpers
+│   ├── btmode_linux.go        # Bluetooth PAN via NetworkManager / BlueZ
+│   ├── btmode_windows.go      # Bluetooth PAN via Winsock + Bluetooth APIs
+│   ├── btmode_other.go        # rejects -b on other systems
 │   ├── qr.go                  # QR generation (standard library only)
 │   ├── firewall_windows.go / firewall_other.go
+│   ├── web_embed.go           # optional webembed: embed web/ inside the binary
 │   └── vigem_*_windows.go     # embed / do not embed ViGEmClient.dll
 ├── layouts/                   # every .json file = one layout in the menu
 │   ├── classic.json
@@ -534,6 +606,8 @@ dopad/
     └── wake.mp4 / wake.webm   # silent video to keep the screen on
 ```
 
+To embed the web UI into the binary, copy `web/` to `server/web/` before building. `make build` and `make build-windows` then detect it and add the `webembed` tag automatically. An external `web/` folder next to the binary always takes priority.
+
 ---
 
 ## Troubleshooting
@@ -547,12 +621,16 @@ dopad/
 | iPhone shows browser bars | Use **Add to Home Screen** and open from the icon. |
 | Screen turns off while playing | Phone low-power mode can block wake lock and the fallback video. |
 | Hotspot does not start | Needs root, NetworkManager (`nmcli`), and a Wi-Fi card that supports AP mode. |
+| Bluetooth mode never finds the phone | Pair the phone first, then enable Bluetooth tethering (Android) or Personal Hotspot (iPhone, cellular data required). On Linux check `bluetoothctl`/NetworkManager; the root fallback needs `bluez-tools` and `dhcpcd`/`udhcpc`. |
+| Bluetooth link is up but the page does not open | Use the URL printed when the link comes up. On Windows, run as administrator once to remove the Bluetooth default route, or set `DOPAD_BT=<MAC>` to choose a phone. |
+| `/qr` returns 404 in Bluetooth mode | Normal until the first phone connects; the QR code is generated when the link is up. |
 
 ---
 
 ## Tested on
 
 - **Server:** Linux and Windows.
+- **Bluetooth mode:** Linux server with an Android phone.
 - **Browsers:** Chrome and Mull on Android; Safari, Brave, and Chrome on iPhone.
 - **Real use:** a continuous 3–4 hour co-op session of *Cult of the Lamb* with no issues.
 
@@ -561,6 +639,9 @@ dopad/
 ## Contributing and license
 
 The project is small and focused; the structure above shows where each part lives.
+
+Release notes are in [CHANGELOG.md](CHANGELOG.md).
+
 ### License
 
 DOpad is released under the **[0BSD license](LICENSE)**: use it, copy it, modify it, sell it — with no conditions, no attribution required. It comes with no warranty.

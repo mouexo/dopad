@@ -79,7 +79,7 @@ type Pad struct {
 func newPad() (*Pad, error) {
 	fd, err := syscall.Open(uinputDev, syscall.O_WRONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return nil, fmt.Errorf("تعذر فتح %s (%w): قم بتشغيل 'sudo make setup' أولاً لإعداد الصلاحيات", uinputDev, err)
+		return nil, fmt.Errorf("تعذر فتح %s (%w): قم بتشغيل 'make setup' أولاً لإعداد الصلاحيات", uinputDev, err)
 	}
 	fail := func(e error) (*Pad, error) { syscall.Close(fd); return nil, e }
 
@@ -164,7 +164,7 @@ func (p *Pad) apply(d []byte) {
 func preflight() error {
 	fd, err := syscall.Open(uinputDev, syscall.O_WRONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return fmt.Errorf("تعذر فتح %s (%w): قم بتشغيل 'sudo make setup' أولاً لإعداد الصلاحيات، ثم سجّل الخروج والدخول", uinputDev, err)
+		return fmt.Errorf("تعذر فتح %s (%w): قم بتشغيل 'make setup' أولاً لإعداد الصلاحيات، ثم سجّل الخروج والدخول", uinputDev, err)
 	}
 	syscall.Close(fd)
 	return nil

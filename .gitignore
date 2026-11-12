@@ -3,7 +3,8 @@
 /DOpad.exe
 /*.exe
 /*.dll
-/packed
+# Generated distribution folders (make dist)
+/dist/
 
 # Required for Windows builds (ViGEmClient, MIT — see docs/THIRD_PARTY_NOTICES.md)
 !server/ViGEmClient.dll
@@ -11,6 +12,8 @@
 # Generated/local runtime files
 dopad.crt
 dopad.key
+# Optional web copy used only to embed the UI via the webembed build tag
+/server/web/
 
 # OS / editor noise
 .DS_Store
