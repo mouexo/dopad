@@ -84,9 +84,12 @@ jobs:
           cd dist
           for d in DOpad-*; do
             [ -d "$d" ] || continue
-            tar -czf "$d.tar.gz" "$d"
-            zip -qr "$d.zip" "$d"
+            case "$d" in
+              *-linux*)   tar -czf "$d.tar.gz" "$d" ;;
+              *-windows*) zip -qr  "$d.zip"    "$d" ;;
+            esac
           done
+          ls -1 *.tar.gz *.zip | sort
       - name: Extract release notes from CHANGELOG
         run: |
           version="${GITHUB_REF_NAME#v}"
@@ -101,8 +104,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/*.zip dist/*.tar.gz --clobber
+            gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME"
+            gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.zip --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.tar.gz \
-              --title "DOpad $GITHUB_REF_NAME" --notes-file release-notes.md
+            gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.zip \
+              --title "$GITHUB_REF_NAME" --notes-file release-notes.md
           fi
