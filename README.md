@@ -53,6 +53,10 @@ The whole project is plain Go standard library: **no cgo and no third-party Go d
 - **Built-in hotspot mode (Linux)** — the computer itself becomes the Wi-Fi access point, with an embedded DHCP server. No router and no internet required.
 - **Bluetooth mode (`-b`)** — same page and same 8-byte packets over Bluetooth instead of Wi-Fi. Works with Android and iPhone, with no app on the phone, and never interferes with either device's Wi-Fi.
 - **QR code** printed in the terminal and served as PNG at `/qr`.
+- **Local control panel (`dopad-panel`).** A small browser UI bound to
+  `127.0.0.1` that switches Wi‑Fi/Bluetooth/Self modes, starts and stops the
+  server, shows logs and the live QR code, and edits or exports layouts. It is
+  included in every package.
 - **Screen stays awake** while playing (Screen Wake Lock, with a silent-video fallback for plain HTTP).
 - **Installable as a web app** on iPhone for a true fullscreen experience.
 
@@ -85,12 +89,14 @@ Open 🎮DOpad on browser: http://192.168.1.42:8080
 
 Open the address on your phone (same Wi-Fi network), pick a player and a layout, and press **Start**.
 
-> The program must stay next to its `web/` and `layouts/` folders (or point to them with `DOPAD_WEB` and `DOPAD_LAYOUTS`).
+> The program must stay next to its `layouts/` folder. External-web packages also need `web/`; embedded packages carry the UI inside the binary. Use `DOPAD_WEB` and `DOPAD_LAYOUTS` to point elsewhere.
 
 ### From source
 
 ```bash
-make run          # build and run on Linux
+make build        # build ./DOpad and ./dopad-panel
+./DOpad           # start the gamepad server
+./dopad-panel     # optional: local control panel
 ```
 
 See [Building from source](#building-from-source).
@@ -530,14 +536,11 @@ All browsers on **iOS** (Safari, Chrome, Brave — they all use WebKit) require 
 ## Building from source
 
 ```bash
-make build            # Linux binary: ./DOpad
+make build            # Linux binary: ./DOpad, plus ./dopad-panel
+make build-panel      # local control panel only: ./dopad-panel
 make build-windows    # Windows binary: ./DOpad.exe (cross-compiles from Linux)
-make run              # build and run
-make run-self         # build and run in hotspot mode (sudo)
-make run-bt           # build and run in Bluetooth mode
 make setup            # Linux: udev rule + input group (once, if needed)
 make dist             # four ready-to-run folders in dist/ (see below)
-make clean            # remove build outputs and dist/
 ```
 
 Directly on Windows (cmd):
@@ -556,12 +559,12 @@ If `server/ViGEmClient.dll` exists, `make build-windows` embeds it using the `vi
 
 | Folder | Web UI | Contents |
 |---|---|---|
-| `dist/DOpad-<version>-linux/` | embedded | `DOpad`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
-| `dist/DOpad-<version>-linux+web/` | external `web/` | `DOpad`, `web/`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
-| `dist/DOpad-<version>-windows/` | embedded | `DOpad.exe`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
-| `dist/DOpad-<version>-windows+web/` | external `web/` | `DOpad.exe`, `web/`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-linux/` | embedded | `DOpad`, `dopad-panel`, `web/controls.js`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-linux+web/` | external `web/` | `DOpad`, `dopad-panel`, `web/`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-windows/` | embedded | `DOpad.exe`, `dopad-panel.exe`, `web/controls.js`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-windows+web/` | external `web/` | `DOpad.exe`, `dopad-panel.exe`, `web/`, `layouts/`, `THIRD_PARTY_NOTICES.md` |
 
-The binary keeps the same name inside each folder. The embedded variants do **not** include `web/`, because an external `web/` folder always takes priority at runtime. `layouts/` stays external in every variant so you can edit it. On Windows, `ViGEmClient.dll` is embedded when `server/ViGEmClient.dll` exists.
+The binary keeps the same name inside each folder. The embedded variants do **not** include the full `web/` folder, because an external `web/` always takes priority at runtime; they include only `web/controls.js` so the panel editor can read the control catalog. `layouts/` stays external in every variant so you can edit it. On Windows, `ViGEmClient.dll` is embedded when `server/ViGEmClient.dll` exists.
 
 **Smaller, reproducible binaries.** The Makefile already builds with `-ldflags="-s -w"` (strips the symbol table and debug information) and `-trimpath` (removes local filesystem paths from the binary). If you build manually, add the same flags. `-ldflags="-s -w"` typically shrinks the binary by about 30% (for example from ~11 MB to ~7.6 MB) with no effect on performance. The Makefile also sets `CGO_ENABLED=0`, so the Linux binary is statically linked and does not depend on the host's libc.
 
@@ -577,6 +580,12 @@ dopad/
 ├── docs/
 │   ├── images/                # images used in the READMEs
 │   └── THIRD_PARTY_NOTICES.md
+├── gui/panel/                 # local control panel (separate Go module)
+│   ├── main.go                # loopback HTTP server, API, settings
+│   ├── manager.go             # DOpad process lifecycle and logs
+│   ├── catalog.go             # reads web/controls.js at runtime
+│   ├── layouts.go             # list/load/save layouts
+│   └── web/                   # panel UI (embedded in the binary)
 ├── server/                    # Go module
 │   ├── go.mod
 │   ├── main.go                # HTTP + WebSocket + slots + -s / -b mode (platform independent)

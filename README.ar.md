@@ -53,6 +53,9 @@
 - **وضع نقطة وصل مدمج (لينكس)** — الحاسوب نفسه يصبح نقطة Wi-Fi مع خادم DHCP مدمج، بلا راوتر ولا إنترنت.
 - **وضع البلوتوث (`-b`)** — نفس الصفحة ونفس حزم الـ 8 بايت عبر البلوتوث بدل الواي فاي. يعمل مع أندرويد وآيفون، بلا تطبيق على الهاتف، ولا يتعارض مع واي فاي أي من الجهازين.
 - **رمز QR** يُطبع في الطرفية ويُقدَّم PNG على المسار `/qr`.
+- **لوحة تحكم محلية (`dopad-panel`).** واجهة متصفح صغيرة مرتبطة بـ
+  `127.0.0.1` تبدّل أوضاع Wi‑Fi والبلوتوث وSelf، وتشغّل الخادم وتوقفه، وتعرض
+  السجل ورمز QR الحيّ، وتحرّر التخطيطات وتصدّرها. وهي مضمّنة في كل حزمة.
 - **الشاشة تبقى مضاءة** أثناء اللعب (Screen Wake Lock مع فيديو صامت بديل على HTTP العادي).
 - **قابل للتثبيت كتطبيق ويب** على الأيفون لتجربة شاشة كاملة حقيقية.
 
@@ -85,12 +88,14 @@ Open 🎮DOpad on browser: http://192.168.1.42:8080
 
 افتح العنوان على الهاتف (نفس شبكة Wi-Fi)، واختار اللاعب والتخطيط، ثم اضغط **ابدأ**.
 
-> يجب أن يبقى الملف التنفيذي بجانب مجلدي `web/` و`layouts/` (أو حدّد مكانهما بـ `DOPAD_WEB` و`DOPAD_LAYOUTS`).
+> يجب أن يبقى الملف التنفيذي بجانب مجلد `layouts/`. وتحتاج حزم الواجهة الخارجية أيضًا إلى `web/`، أما الحزم المضمّنة فتحمل الواجهة داخل الثنائي. ويمكن تحديد مكانهما بـ`DOPAD_WEB` و`DOPAD_LAYOUTS`.
 
 ### من المصدر
 
 ```bash
-make run          # يبني ويشغّل على لينكس
+make build        # يبني ./DOpad و ./dopad-panel
+./DOpad           # تشغيل خادم لوحة اللعب
+./dopad-panel     # اختياري: لوحة التحكم المحلية
 ```
 
 انظر [البناء من المصدر](#البناء-من-المصدر).
@@ -531,14 +536,11 @@ make setup
 ## البناء من المصدر
 
 ```bash
-make build            # ملف لينكس: ./DOpad
+make build            # ملف لينكس: ./DOpad و ./dopad-panel
+make build-panel      # لوحة التحكم المحلية فقط: ./dopad-panel
 make build-windows    # ملف ويندوز: ./DOpad.exe (تجميع عابر من لينكس)
-make run              # يبني ويشغّل
-make run-self         # يبني ويشغّل بوضع نقطة الوصل (sudo)
-make run-bt           # يبني ويشغّل بوضع البلوتوث
 make setup            # لينكس: قاعدة udev + مجموعة input (مرة واحدة، عند الحاجة)
 make dist             # أربعة مجلدات جاهزة للتشغيل في dist/ (انظر أدناه)
-make clean            # حذف ملفات البناء و dist/
 ```
 
 وعلى ويندوز مباشرة (cmd):
@@ -557,12 +559,12 @@ go build -trimpath -ldflags="-s -w" -tags vigemdll -o DOpad.exe .
 
 | المجلد | الواجهة | المحتوى |
 |---|---|---|
-| `dist/DOpad-<version>-linux/` | مضمّنة | `DOpad`، `layouts/`، `THIRD_PARTY_NOTICES.md` |
-| `dist/DOpad-<version>-linux+web/` | `web/` خارجي | `DOpad`، `web/`، `layouts/`، `THIRD_PARTY_NOTICES.md` |
-| `dist/DOpad-<version>-windows/` | مضمّنة | `DOpad.exe`، `layouts/`، `THIRD_PARTY_NOTICES.md` |
-| `dist/DOpad-<version>-windows+web/` | `web/` خارجي | `DOpad.exe`، `web/`، `layouts/`، `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-linux/` | مضمّنة | `DOpad`، `dopad-panel`، `web/controls.js`، `layouts/`، `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-linux+web/` | `web/` خارجي | `DOpad`، `dopad-panel`، `web/`، `layouts/`، `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-windows/` | مضمّنة | `DOpad.exe`، `dopad-panel.exe`، `web/controls.js`، `layouts/`، `THIRD_PARTY_NOTICES.md` |
+| `dist/DOpad-<version>-windows+web/` | `web/` خارجي | `DOpad.exe`، `dopad-panel.exe`، `web/`، `layouts/`، `THIRD_PARTY_NOTICES.md` |
 
-يبقى اسم الثنائي نفسه داخل كل مجلد. ولا تحتوي النسخ المضمّنة على `web/`، لأن أي مجلد `web/` خارجي له الأولوية دائمًا عند التشغيل. ويبقى `layouts/` خارجيًا في كل النسخ كي تستطيع تعديله. وعلى ويندوز يُضمَّن `ViGEmClient.dll` عند وجود `server/ViGEmClient.dll`.
+يبقى اسم الثنائي نفسه داخل كل مجلد. ولا تحتوي النسخ المضمّنة على مجلد `web/` الكامل، لأن أي مجلد `web/` خارجي له الأولوية دائمًا عند التشغيل؛ بل تحتوي فقط على `web/controls.js` كي يقرأ محرّر اللوحة كتالوج الأزرار. ويبقى `layouts/` خارجيًا في كل النسخ كي تستطيع تعديله. وعلى ويندوز يُضمَّن `ViGEmClient.dll` عند وجود `server/ViGEmClient.dll`.
 
 **ملفات أصغر وقابلة لإعادة البناء.** يستخدم الـMakefile أصلًا `-ldflags="-s -w"` (لحذف جدول الرموز ومعلومات التنقيح) و`-trimpath` (لإزالة مسارات نظام الملفات المحلية من الثنائي). وإن بنيت يدويًا فأضف الوسمين نفسيهما. ويصغّر `-ldflags="-s -w"` الملف عادةً نحو 30% (مثلًا من ~11MB إلى ~7.6MB) دون أي أثر على الأداء. ويضبط الـMakefile أيضًا `CGO_ENABLED=0`، فيكون ثنائي لينكس مرتبطًا ارتباطًا ساكنًا ولا يعتمد على libc الخاص بالنظام.
 
@@ -578,6 +580,12 @@ dopad/
 ├── docs/
 │   ├── images/                # صور ملفات README
 │   └── THIRD_PARTY_NOTICES.md
+├── gui/panel/                 # لوحة التحكم المحلية (وحدة Go مستقلة)
+│   ├── main.go                # خادم HTTP محلي + API + الإعدادات
+│   ├── manager.go             # دورة حياة خادم DOpad والسجل
+│   ├── catalog.go             # يقرأ web/controls.js وقت التشغيل
+│   ├── layouts.go             # عرض/تحميل/حفظ التخطيطات
+│   └── web/                   # واجهة اللوحة (مضمّنة في الثنائي)
 ├── server/                    # وحدة Go
 │   ├── go.mod
 │   ├── main.go                # HTTP + WebSocket + الخانات + وضعا -s و-b (مستقل عن المنصة)

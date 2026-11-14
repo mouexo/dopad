@@ -16,11 +16,15 @@ jobs:
         with:
           go-version-file: server/go.mod
       - name: Formatting
-        run: test -z "$(gofmt -l server)"
+        run: test -z "$(gofmt -l server gui/panel)"
       - name: Vet (Linux)
         run: cd server && go vet ./...
       - name: Vet (Windows)
         run: cd server && GOOS=windows GOARCH=amd64 go vet ./...
+      - name: Vet panel (Linux)
+        run: cd gui/panel && go vet ./...
+      - name: Vet panel (Windows)
+        run: cd gui/panel && GOOS=windows GOARCH=amd64 go vet ./...
 
   build-linux:
     runs-on: ubuntu-latest

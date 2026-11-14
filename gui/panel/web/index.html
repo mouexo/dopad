@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DOpad Panel</title>
+  <link rel="icon" type="image/png" href="/icon.png">
+  <!--DOPAD_TOKEN-->
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><img src="/icon.png" alt=""></div>
+      <div class="brand-text">
+        <h1>DOpad</h1>
+        <p>لوحة التحكم المحلية</p>
+      </div>
+    </div>
+
+    <nav class="tabs" aria-label="أقسام اللوحة">
+      <button class="tab active" data-tab="server" type="button">الخادم</button>
+      <button class="tab" data-tab="editor" type="button">المحرر</button>
+    </nav>
+
+    <div class="top-actions">
+      <span class="conn" id="conn"><span class="dot" id="conn-dot"></span><span id="conn-text">جارٍ الاتصال…</span></span>
+      <button class="btn tiny ghost" id="quit-panel" type="button" title="إيقاف الخادم وإغلاق اللوحة">إغلاق اللوحة</button>
+    </div>
+  </div>
+
+  <main>
+    <!-- ============================ الخادم ============================ -->
+    <section class="page active" id="page-server">
+      <div class="server-grid">
+        <div class="col">
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>وضع الاتصال</h2>
+                <p class="muted">كيف يتصل الهاتف بالحاسوب؟</p>
+              </div>
+              <span class="badge" id="mode-badge">Wi‑Fi</span>
+            </div>
+
+            <div class="modes" id="modes">
+              <button class="mode" data-mode="wifi" type="button">
+                <span class="mode-icon">📶</span>
+                <span class="mode-title">Wi‑Fi</span>
+                <span class="mode-desc">الهاتف والحاسوب على الشبكة المحلية نفسها.</span>
+                <code>./DOpad</code>
+              </button>
+              <button class="mode" data-mode="bt" type="button">
+                <span class="mode-icon">🔵</span>
+                <span class="mode-title">Bluetooth</span>
+                <span class="mode-desc">اتصال مباشر عبر بلوتوث (PAN) بلا شبكة.</span>
+                <code>./DOpad -b</code>
+              </button>
+              <button class="mode" data-mode="self" type="button">
+                <span class="mode-icon">🖥️</span>
+                <span class="mode-title">Self</span>
+                <span class="mode-desc">الحاسوب نفسه نقطة اتصال Wi‑Fi (لينكس فقط).</span>
+                <code>sudo ./DOpad -s</code>
+              </button>
+            </div>
+
+            <div class="note hidden" id="self-note"></div>
+          </section>
+
+          <section class="card log-card">
+            <div class="card-head">
+              <div>
+                <h2>سجل الخادم</h2>
+                <p class="muted">آخر 2000 سطر، مع حذف رموز QR تلقائيًا.</p>
+              </div>
+              <div class="row">
+                <label class="check"><input type="checkbox" id="autoscroll" checked> تتبع</label>
+                <button class="btn tiny ghost" id="clear-log" type="button">مسح</button>
+              </div>
+            </div>
+            <pre class="log" id="log" dir="ltr"></pre>
+          </section>
+        </div>
+
+        <div class="col">
+          <section class="card server-card">
+            <div class="card-head">
+              <div class="row">
+                <span class="pill" id="status-pill">متوقف</span>
+                <span class="muted" id="uptime"></span>
+              </div>
+              <button class="btn tiny ghost" id="refresh-state" type="button">تحديث</button>
+            </div>
+
+            <div class="facts">
+              <div><span>PID</span><b id="fact-pid">—</b></div>
+              <div><span>رمز الخروج</span><b id="fact-exit">—</b></div>
+            </div>
+
+            <div class="url-row">
+              <input id="url" type="text" readonly placeholder="سيظهر الرابط بعد التشغيل">
+              <button class="btn small" id="copy-url" type="button" disabled>نسخ</button>
+              <button class="btn small primary" id="open-url" type="button" disabled>فتح</button>
+            </div>
+
+            <p class="muted small" id="status-note"></p>
+
+            <div class="server-split">
+              <div class="server-settings">
+                <div class="subhead">
+                  <h3>إعدادات التشغيل</h3>
+                  <p class="muted">تُحفظ تلقائيًا في <code>layouts/panel/settings.json</code>.</p>
+                </div>
+
+                <label class="field">
+                  <span>ملف الخادم <small class="muted">اتركه فارغًا للاكتشاف التلقائي</small></span>
+                  <div class="row">
+                    <input id="binary" type="text" spellcheck="false" placeholder="اكتشاف تلقائي">
+                    <button class="btn small" id="detect" type="button">اكتشاف</button>
+                  </div>
+                  <small class="muted path" id="detected"></small>
+                </label>
+
+                <label class="field">
+                  <span>المنفذ <small class="muted">الافتراضي 8080، ويُختار بديل تلقائيًا عند الانشغال</small></span>
+                  <input id="port" type="number" min="1" max="65535" step="1" placeholder="8080">
+                </label>
+
+                <label class="field hidden" id="password-row">
+                  <span>كلمة مرور sudo <small class="muted">تُستخدم مرة واحدة ولا تُحفظ على القرص</small></span>
+                  <input id="password" type="password" autocomplete="off" placeholder="اختيارية إذا كنت تستخدم pkexec">
+                </label>
+
+                <div class="actions">
+                  <button class="btn primary" id="start" type="button">تشغيل الخادم</button>
+                  <button class="btn danger" id="stop" type="button" disabled>إيقاف</button>
+                </div>
+                <div class="note hidden" id="build-hint"></div>
+              </div>
+
+              <aside class="qr-panel">
+                <div class="subhead qr-head">
+                  <div>
+                    <h3>رمز QR</h3>
+                    <p class="muted">امسحه من الهاتف لفتح واجهة التحكم.</p>
+                  </div>
+                  <button class="btn tiny ghost" id="refresh-qr" type="button">تحديث</button>
+                </div>
+                <div class="qr-box">
+                  <img id="qr-img" alt="رمز QR للاتصال" hidden>
+                  <div class="qr-empty" id="qr-empty">شغّل الخادم لعرض رمز QR.</div>
+                </div>
+                <p class="muted small" id="qr-note"></p>
+              </aside>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ المحرر ============================ -->
+    <section class="page" id="page-editor">
+      <div class="editor-grid">
+        <aside class="card palette">
+          <div class="card-head">
+            <div>
+              <h2>المكتبة</h2>
+              <p class="muted">من <code>web/controls.js</code> وقت التشغيل.</p>
+            </div>
+            <button class="btn tiny ghost" id="refresh-catalog" type="button" title="إعادة قراءة controls.js">تحديث</button>
+          </div>
+
+          <h3>العناصر</h3>
+          <div class="type-list" id="type-list"></div>
+
+          <h3>أزرار جاهزة</h3>
+          <div class="button-grid" id="button-grid"></div>
+
+          <h3>مزلاجات</h3>
+          <div class="button-grid" id="trigger-grid"></div>
+
+          <div class="note small" id="catalog-note"></div>
+        </aside>
+
+        <section class="editor-main">
+          <div class="card toolbar">
+            <div class="row">
+              <label class="grow">التخطيط
+                <select id="layout-select"></select>
+              </label>
+              <button class="btn small" id="load-layout" type="button">تحميل</button>
+              <button class="btn small ghost" id="new-layout" type="button">جديد</button>
+            </div>
+            <div class="row">
+              <label class="grow">اسم الملف
+                <input id="layout-id" type="text" spellcheck="false" placeholder="my-layout">
+              </label>
+              <label class="grow">الاسم المعروض
+                <input id="layout-name" type="text" placeholder="تخطيطي">
+              </label>
+              <button class="btn small" id="save-layout" type="button">حفظ</button>
+            </div>
+            <div class="row">
+              <button class="btn small ghost" id="import" type="button">استيراد JSON</button>
+              <button class="btn small primary" id="export" type="button">تصدير JSON</button>
+              <button class="btn small ghost" id="copy-json" type="button">نسخ JSON</button>
+              <span class="badge warn hidden" id="dirty">غير محفوظ</span>
+            </div>
+          </div>
+
+          <div class="stage-wrap" id="stage-wrap">
+            <div class="stage" id="stage">
+              <div class="stage-grid"></div>
+              <div class="stage-elements" id="stage-elements"></div>
+              <div class="selection hidden" id="selection"></div>
+              <div class="handle hidden" id="selection-handle"></div>
+            </div>
+            <div class="stage-caption">
+              <span id="stage-info">—</span>
+              <span class="muted">اسحب العنصر لتحريكه • اسحب المقبض لتغيير الحجم • Delete للحذف</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="card inspector">
+          <div class="card-head">
+            <div>
+              <h2>الخصائص</h2>
+              <p class="muted" id="sel-type">لم يتم اختيار عنصر</p>
+            </div>
+            <span class="badge" id="sel-badge">—</span>
+          </div>
+
+          <div class="empty" id="inspector-empty">اختر عنصرًا من المسرح أو من قائمة الطبقات.</div>
+          <div class="fields" id="inspector-fields"></div>
+
+          <div class="hidden" id="parts-section">
+            <div class="card-head">
+              <div>
+                <h3>أجزاء الإطار</h3>
+                <p class="muted">كل جزء زر أو مزلاق داخل الـ pad.</p>
+              </div>
+              <div class="row">
+                <button class="btn tiny" id="add-part-button" type="button">+ زر</button>
+                <button class="btn tiny" id="add-part-trigger" type="button">+ مزلاق</button>
+              </div>
+            </div>
+            <div class="parts-list" id="parts-list"></div>
+            <div class="fields" id="part-fields"></div>
+            <button class="btn tiny danger" id="delete-part" type="button">حذف الجزء المحدد</button>
+          </div>
+
+          <h3>الطبقات</h3>
+          <div class="layers" id="layers"></div>
+
+          <div class="row actions">
+            <button class="btn small ghost" id="dup" type="button">تكرار</button>
+            <button class="btn small ghost" id="raise" type="button">رفع</button>
+            <button class="btn small ghost" id="lower" type="button">خفض</button>
+            <button class="btn small danger" id="del" type="button">حذف</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <input type="file" id="import-file" accept=".json,application/json" hidden>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
